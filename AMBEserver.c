@@ -54,6 +54,8 @@ static const char DV3K_CONTROL_VERSTRING_RESPONSE[] = {0x56, 0x31, 0x32, 0x30, 0
 static const char DV3K_CONTROL_PRODID_RESPONSE[] = {0x41, 0x4d, 0x42, 0x45, 0x33, 0x30, 0x30, 0x30, 0x52, 0x00};
 static const char ZERO_PACKET[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
 #define dv3k_packet_size(a) (1 + sizeof((a).header) + ntohs((a).header.payload_length))
 
 #pragma pack(push, 1)
@@ -297,14 +299,16 @@ int resetD3VK(int fd, int hwReset)
     } else {
 
         for ( int i = 0; i < 35 ; i++ ) {
-            write(fd, ZERO_PACKET, 10);
+            if (write(fd, ZERO_PACKET, ARRAY_SIZE(ZERO_PACKET)) == -1) {
+                // make gcc silent
+            }
             usleep(1000);
         }
 
         tcflush(fd,TCIOFLUSH);
         usleep(1000);
 
-        if(write(fd, DV3K_CONTROL_RESETSOFTCFG, 11)  == -1) {
+        if(write(fd, DV3K_CONTROL_RESETSOFTCFG, ARRAY_SIZE(DV3K_CONTROL_RESETSOFTCFG))  == -1) {
             fprintf(stderr, "AMBEserver: error writing RESETSOFTCFG packet: %s\n", strerror(errno));
             return 0;
         }
@@ -359,7 +363,7 @@ int initDV3K(int fd, int hwReset)
 
 
 
-    if(write(fd, DV3K_CONTROL_PRODID, 5) == -1) {
+    if(write(fd, DV3K_CONTROL_PRODID, ARRAY_SIZE(DV3K_CONTROL_PRODID)) == -1) {
                 fprintf(stderr, "AMBEserver: error writing product id packet: %s\n", strerror(errno));
         return 0;
     }
@@ -376,7 +380,7 @@ int initDV3K(int fd, int hwReset)
     }
     strncpy(prodId, responsePacket.payload.ctrl.data.prodid, sizeof(prodId));
 
-    if(write(fd, DV3K_CONTROL_VERSTRING, 5) == -1) {
+    if(write(fd, DV3K_CONTROL_VERSTRING, ARRAY_SIZE(DV3K_CONTROL_VERSTRING)) == -1) {
         fprintf(stderr, "AMBEserver: error writing version packet: %s\n", strerror(errno));
         return 0;
     }
@@ -630,7 +634,7 @@ int main(int argc, char **argv)
                 break;
 #else
             case 'i':
-                strncpy(dv3000tty, optarg, sizeof(dv3000tty));
+                snprintf(dv3000tty, MAXPATHLEN, "%s", optarg);
                 break;
 #endif
             case 'o':
